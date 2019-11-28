@@ -31,7 +31,7 @@ class GroupStore extends ObjectStore{
      * 移除指定gid的分组
      * */
     public function remove( $gid ){
-        if( $this->findById( $gid ) !== null ){
+        if( $this->getById( $gid ) !== null ){
             unset($this->data[$gid]);
         }
     }
@@ -58,7 +58,7 @@ class GroupStore extends ObjectStore{
      * 查找指定id的分组
      * 可批量查询
      * */
-    public function findById( $gid ){
+    public function getById( $gid ){
         return isset( $this->data[$gid] ) ? $this->data[$gid] : null;
     }
     /*

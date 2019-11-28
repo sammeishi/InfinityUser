@@ -9,7 +9,12 @@ use imsd\infinityUser\Permission;
  * */
 class RoleStore extends ObjectStore{
     protected $saveKey = "role";
-    protected $data = array(); //将数据默认设为数组
+    /*
+     * 默认为数组
+     * */
+    protected static function def(){
+        return [];
+    }
     /*
      * 删除指定角色
      * */
@@ -52,10 +57,16 @@ class RoleStore extends ObjectStore{
         $this->data[] = $role;
     }
     /*
+     * 根据id获取角色信息
+     * */
+    public function getById( $rid ){
+        return isset($this->data[$rid]) ? $this->data[$rid] : null;
+    }
+    /*
      * 获取所有
      * */
     public function all(){
-        return $this->data ? $this->data : [];
+        return $this->data;
     }
 }
 ?>
