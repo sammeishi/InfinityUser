@@ -6,6 +6,8 @@
     "php": ">=7.1",
     "yiisoft/yii2": "~2.0.0"
   },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "imsd\\infinityUser\\": "./src/"
