@@ -62,8 +62,8 @@ class User extends ORMBase{
      * 1. 组ID是否存在
      * 2. 角色id是否存在
      * */
-    public static function check( $init ){
-        if( !$init || !is_array($init) ){
+    public static function check( $init = [] ){
+        if( !is_array($init) ){
             throw new Exception('params not array!');
         }
         //检查角色是否存在
