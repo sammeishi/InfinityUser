@@ -43,7 +43,10 @@ class ORMBase extends ActiveRecord{
     /*
      * 过滤字段，仅挑选出本ORM对应表的字段
      * */
-    public static function delUnknownProp( $a = [] ){
+    public static function delUnknownProp( $a ){
+        if( !is_array( $a ) ){
+            return $a;
+        }
         $fields = static::getTableSchema()->getColumnNames();
         $na = [];
         foreach ( $a as $key => $val){
