@@ -115,7 +115,6 @@ class User extends ORMBase{
         $define = array_merge(array(
             //零件定义列表
             'profile' => Profile::className(), //资料
-            'login' => Login::className(), //登陆
         ),static::createExtPart());
         foreach ($define as $name => $partClass){
             $init = isset( $allInit[$name] ) ? $allInit[ $name ] : null;
