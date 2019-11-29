@@ -17,9 +17,16 @@ use yii\db\ActiveRecord;
  *  2. 时间字段自动设置，构造时补全created_at 提交时补全updated_at
  * */
 class ORMBase extends ActiveRecord{
-
     //时间字段自动设置
     protected static $autoTimeFieldSet = true;
+    /*
+     * 构造函数
+     * 删除不是表字段的属性，否则ActiveRecord报错
+     * */
+    public function __construct($config = []){
+        parent::__construct( static::delUnknownProp($config));
+    }
+
     /*
      * 初始化 yii2会调用
      * 1. 自动设置创建时间 如果没有传入的话
@@ -33,10 +40,22 @@ class ORMBase extends ActiveRecord{
             !$this->created_at ? $this->created_at = date("Y-m-d H:i:s",time()) : null;
         }
     }
-
+    /*
+     * 过滤字段，仅挑选出本ORM对应表的字段
+     * */
+    public static function delUnknownProp( $a = [] ){
+        $fields = static::getTableSchema()->getColumnNames();
+        $na = [];
+        foreach ( $a as $key => $val){
+            if( in_array( $key,$fields ) ){
+                $na[ $key ] = $val;
+            }
+        }
+        return $na;
+    }
     /*
      * 监听beforeSave事件
-     * 补全updated_at字段
+     * 实现autoTimeFieldSet功能：补全updated_at字段
      * */
     public function beforeSave($insert)
     {
