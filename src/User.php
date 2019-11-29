@@ -138,8 +138,12 @@ class User extends ORMBase{
      * 资料零件
      * ======================================================
      * */
+    /**
+     * 资料的定义
+     * @return  ActiveQuery     仅返回【查询器】
+     */
     public function getProfile(){
-        return $this->hasOne(Profile::className(),['uid' => 'uid'])->one();
+        return $this->hasOne(Profile::className(),['uid' => 'uid']);
     }
     /*
      * ======================================================
@@ -152,12 +156,13 @@ class User extends ORMBase{
      * ======================================================
      * */
     /*
-     * 此处定义的是 登录薄
+     * 登录薄的定义
      * 即这个用户所有登陆信息！！！
      * 将会查询这个用户所有登陆信息
+     * @return  ActiveQuery     仅返回【查询器】
      * */
     public function getLoginBook(){
-        return $this->hasMany( Login::className(), ['uid' => 'uid'])->all();
+        return $this->hasMany(Login::className(),['uid' => 'uid']);
     }
     /*
      * 查询指定平台的指定账号登陆信息
