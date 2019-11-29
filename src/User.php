@@ -25,6 +25,8 @@ use yii\db\Exception;
  *  3. 登陆信息   login   用户在每个平台账号密码。可有多平台单1平台仅1账号
  * */
 class User extends ORMBase{
+    //此ORM的默认空间，存储时会使用
+    public static $SPACE = null;
     /*
      * ======================================================
      * 用户状态
@@ -82,20 +84,23 @@ class User extends ORMBase{
         }
     }
     /*
-     * 完整构造
-     * 完整的构造出一个User实例
-     * 会将零件全部构造出
-     * @零件初始化
+     * 完整构造出一个新的User实例
+     * 将零件全部构造出实例（link）
+     * @零件初始化参数
      *  主初始化参数内，包含了以零件key为索引的零件初始化参数
+     * @自动剔除无用参数
+     *  初始化参数的无用参数会被删除，ORMBase中调用了 delUnknownProp
      * */
     public static function create( $allInit = array() ){
-        //先构造零件：profile
-        list( $partList, $init ) = self::createAllPart( $allInit );
-        //构造出User并立即保存，
-        $user = new static( $init );
+        //不传入空间使用继承类覆盖的值
+        !isset($allInit['space']) ? $allInit['space'] = static::$SPACE : null;
+        //构造出User实例并立即保存，否则零件无法link（User不存在，link时没有uid的）
+        $user = new static( $allInit );
         $user->save();
-        //在事务内使用link链接零件
-        self::transaction( function()use( $user,$partList ){
+        //创建各个零件
+        $partList = static::createAllPart( $allInit );
+        //在事务内插入各个零件 link调用立即insert数据库
+        static::transaction( function()use( $user,$partList ){
             foreach ($partList as $part){
                 $part->link('user',$user);
             }
@@ -106,41 +111,64 @@ class User extends ORMBase{
     /*
      * 构造出主要零件列表实例 （还有扩展零件，继承类用自己零件时覆盖）
      * @param   $allInit    array(key=>val) 构造User传入的主配置
-     * @会修改主配置
-     *  零件配置也包含在主配置中，key为零件名即是
-     *  因此零件构造后就会删除掉
      * */
     public static function createAllPart( $allInit ){
-        $list = array();
-        $define = array_merge(array(
-            //零件定义列表
+        $list = array(); //所有零件
+        $define = array(//零件定义列表
             'profile' => Profile::className(), //资料
-        ),static::createExtPart());
+        );
+        //构造每个零件的实例
         foreach ($define as $name => $partClass){
             $init = isset( $allInit[$name] ) ? $allInit[ $name ] : null;
             $list[ $name ] = new $partClass( $init );
-            if( $init ){
-                unset( $allInit[$name] );
-            }
         }
-        return [ $list,$allInit ];
+        //构造扩展零件
+        $extList = static::createExtPart( $allInit );
+        //返回所有零件
+        return array_merge( $list,$extList );
     }
     /*
-     * 创建扩展零件
+     * 扩展零件的定义
      * 方便继承类扩展自己的零件
-     * @需要被继承
+     * @return  array   [ partObject1,partObject2 ]
      * */
-    public static function createExtPart(){
+    public static function createExtPart( $allInit ){
         return array();
+    }
+    /*
+     * 从一个User实例上删除扩展零件，从数据库中删除！
+     * 会放在一个事务中执行，因此请直接诶执行sql语句
+     * @继承实现
+     * */
+    public static function deleteExtPart( $ins ){
+        return true;
+    }
+    /*
+     * 监听beforeDelete，删除各个零件
+     * ActiveRecord的delete只会删除自身，并不会删除link的各个ORM,因此此处删除零件
+     * @自动事务
+     *  delete已经开启了事务，因此不需要单独开启！
+     * @触发deleteExtPart
+     *  会调用deleteExtPart，继承类可以删除扩展零件
+     * */
+    public function beforeDelete(){
+        //删除profile
+        Profile::deleteAll(['uid' => $this->uid]);
+        //删除login
+        Login::deleteAll(['uid' => $this->uid]);
+        //调用扩展零件的删除
+        static::deleteExtPart( $this );
+        //返回true继续删除User自身
+        return true;
     }
     /*
      * ======================================================
      * 资料零件
      * ======================================================
      * */
-    /**
+    /*
      * 资料的定义
-     * @return  ActiveQuery     仅返回【查询器】
+     * @return ActiveQuery  仅返回查询器，不要返回结果。查询器可以串联使用。
      */
     public function getProfile(){
         return $this->hasOne(Profile::className(),['uid' => 'uid']);
