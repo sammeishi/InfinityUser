@@ -139,7 +139,7 @@ class User extends ORMBase{
      * ======================================================
      * */
     public function getProfile(){
-        return $this->hasOne(Profile::className(),['uid' => 'uid']);
+        return $this->hasOne(Profile::className(),['uid' => 'uid'])->one();
     }
     /*
      * ======================================================
@@ -157,7 +157,7 @@ class User extends ORMBase{
      * 将会查询这个用户所有登陆信息
      * */
     public function getLoginBook(){
-        return $this->hasMany( Login::className(), ['uid' => 'uid']);
+        return $this->hasMany( Login::className(), ['uid' => 'uid'])->all();
     }
     /*
      * 查询指定平台的指定账号登陆信息
