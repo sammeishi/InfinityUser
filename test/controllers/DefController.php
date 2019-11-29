@@ -9,14 +9,6 @@ class DefController extends Controller
 {
     public function actionIndex()
     {
-        User::create([
-            'space' =>'test',
-            'group_id' => 1,
-            'login'=>[
-                'platform' =>'QQ',
-                'account' =>'QQ',
-            ]
-        ]);
     }
     public function actionAdd(){
 
