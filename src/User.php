@@ -152,10 +152,13 @@ class User extends ORMBase{
      * ======================================================
      * */
     /*
-     * 登陆关联的定义
      * 此处定义的是 登录薄
      * 即这个用户所有登陆信息！！！
+     * 将会查询这个用户所有登陆信息
      * */
+    public function getLoginBook(){
+        return $this->hasMany( Login::className(), ['uid' => 'uid']);
+    }
     /*
      * 查询指定平台的指定账号登陆信息
      * @param   string          $platform   查询平台

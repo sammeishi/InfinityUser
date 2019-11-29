@@ -11,7 +11,7 @@
  Target Server Version : 50728
  File Encoding         : 65001
 
- Date: 28/11/2019 08:55:50
+ Date: 29/11/2019 18:34:56
 */
 
 SET NAMES utf8mb4;
@@ -45,7 +45,7 @@ CREATE TABLE `iu_login`  (
   `updated_at` datetime(0) DEFAULT NULL,
   PRIMARY KEY (`lid`) USING BTREE,
   INDEX `uid`(`uid`, `platform`, `account`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for iu_profile
@@ -55,6 +55,7 @@ CREATE TABLE `iu_profile`  (
   `uid` int(11) NOT NULL,
   `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户显示名称',
   `gender` tinyint(1) DEFAULT NULL COMMENT '性别 0女 1男 null未知',
+  `contact` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `birthday` datetime(0) DEFAULT NULL COMMENT '生日',
   `avatar_img` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '头像图片 可以使用http',
   `created_at` datetime(0) DEFAULT NULL,
@@ -76,6 +77,6 @@ CREATE TABLE `iu_user`  (
   `updated_at` datetime(0) DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`uid`) USING BTREE,
   INDEX `space`(`space`, `status`, `group_id`, `role_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
