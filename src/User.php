@@ -123,6 +123,8 @@ class User extends ORMBase{
     /*
      * 监听beforeDelete，删除各个零件
      * ActiveRecord的delete只会删除自身，并不会删除link的各个ORM,因此此处删除零件
+     * @仅实例调用
+     *  此功能使用场景为：已经find出实例了，对实例del
      * @自动事务
      *  delete已经开启了事务，因此不需要单独开启！
      * @触发deleteExtPart
@@ -135,6 +137,18 @@ class User extends ORMBase{
         Login::deleteAll(['uid' => $this->uid]);
         //返回true继续删除User自身
         return true;
+    }
+    /*
+     * 批量删除
+     * 不会查询实例，直接删除以及各个零件
+     * @param   array   $uidList    要删除的uid列表
+     * */
+    public static function batchDel( $uidList ){
+        self::transaction(function()use( $uidList ){
+            static::deleteAll( ['uid' => $uidList] );
+            Profile::deleteAll( ['uid' => $uidList] );
+            Login::deleteAll( ['uid' => $uidList] );
+        });
     }
     /*
      * ======================================================
