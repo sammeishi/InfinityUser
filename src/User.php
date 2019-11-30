@@ -160,8 +160,9 @@ class User extends ORMBase{
      * */
     /*
      * 登录薄的定义
-     * 即这个用户所有登陆信息！！！
-     * 将会查询这个用户所有登陆信息
+     * 登陆薄是指用户的所有登陆信息[ login1,login2 ]
+     * @loginBook结构
+     *  [ login instance,login instance,login instance ... ]
      * @return  ActiveQuery     仅返回【查询器】
      * */
     public function getLoginBook(){
@@ -207,6 +208,23 @@ class User extends ORMBase{
             //返回实例
             return $login;
         }
+    }
+    /*
+     * 更新登陆薄
+     * 1. 先删除所有登陆信息
+     * 2. 在将登陆信息全部link进去
+     * @param   array   $loginBook  登陆薄实例。如果为空，则清空当前所有登陆信息
+     * */
+    public function updateLoginBook( $loginBook ){
+        $user = $this;
+        self::transaction(function()use($loginBook,$user){
+            //删除当前所有login信息
+            Login::deleteAll( ['uid' => $user->uid] );
+            //将新的插入
+            foreach ( $loginBook as $login ){
+                $login->link('user',$user);
+            }
+        });
     }
     /*
      * =====================================================
