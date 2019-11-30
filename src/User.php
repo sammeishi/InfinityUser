@@ -103,7 +103,7 @@ class User extends ORMBase{
         return $user;
     }
     /*
-     * 构造出主要零件列表实例 （还有扩展零件，继承类用自己零件时覆盖）
+     * 构造出主要零件列表实例,仅仅是核心零件
      * @param   $allInit    array(key=>val) 构造User传入的主配置
      * */
     public static function createAllPart( $allInit ){
