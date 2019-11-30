@@ -7,6 +7,7 @@ use imsd\infinityUser\Profile;
 use imsd\infinityUser\GroupStore;
 use imsd\infinityUser\RoleStore;
 use yii\db\Exception;
+use yii\helpers\ArrayHelper;
 
 /*
  * 用户类
@@ -15,6 +16,9 @@ use yii\db\Exception;
  * @零件 part
  * 用户模型太大在考虑到扩展性，将功能分割成独立的ORM对象，使用ActiveRecord的
  * ORM关联功能进行融合。
+ * @零件必须通过get定义
+ *  ActiveRecord中通过定义 getPartName函数方式来定义与主ORM的关联性（hasOne,hasMany）
+ *  不能私自挂载，如 User['xxx'] = new part()
  * @ActiveRecord的禁止2个未保存ORM进行link
  *  如果new user之后没有save，零件link这个user，会报错！
  *  因为没有ID进行join呀！！
@@ -39,16 +43,6 @@ class User extends ORMBase{
     public static $STATUS_INTENDED = -1; //预注册用户，功能被限制。可被彻底删除
     public static $STATUS_INVALID = -99999; //已注销，彻底无效
     /*
-     * new构造
-     * 检查参数正确性
-     * */
-    public function __construct($config = [])
-    {
-        static::check( $config );
-        parent::__construct($config);
-    }
-
-    /*
      * 初始化 ( 由yii调用 )
      * 设置默认状态，以及各种默认值
      * */
@@ -64,9 +58,9 @@ class User extends ORMBase{
      * 1. 组ID是否存在
      * 2. 角色id是否存在
      * */
-    public static function check( $init = [] ){
+    public static function constructCheck( $init = [] ){
         if( !is_array($init) ){
-            throw new Exception('params not array!');
+            throw new Exception('construct config wrong! need be array!');
         }
         //检查角色是否存在
         if( !empty( $init['role_id'] ) ){
@@ -114,34 +108,17 @@ class User extends ORMBase{
      * */
     public static function createAllPart( $allInit ){
         $list = array(); //所有零件
-        $define = array(//零件定义列表
-            'profile' => Profile::className(), //资料
-        );
+        //零件定义
+        $partDefine = [
+            'profile' => Profile::className()
+        ];
         //构造每个零件的实例
-        foreach ($define as $name => $partClass){
+        foreach ( $partDefine as $name => $partClass){
             $init = isset( $allInit[$name] ) ? $allInit[ $name ] : null;
             $list[ $name ] = new $partClass( $init );
         }
-        //构造扩展零件
-        $extList = static::createExtPart( $allInit );
         //返回所有零件
-        return array_merge( $list,$extList );
-    }
-    /*
-     * 扩展零件的定义
-     * 方便继承类扩展自己的零件
-     * @return  array   [ partObject1,partObject2 ]
-     * */
-    public static function createExtPart( $allInit ){
-        return array();
-    }
-    /*
-     * 从一个User实例上删除扩展零件，从数据库中删除！
-     * 会放在一个事务中执行，因此请直接诶执行sql语句
-     * @继承实现
-     * */
-    public static function deleteExtPart( $ins ){
-        return true;
+        return $list;
     }
     /*
      * 监听beforeDelete，删除各个零件
@@ -154,10 +131,8 @@ class User extends ORMBase{
     public function beforeDelete(){
         //删除profile
         Profile::deleteAll(['uid' => $this->uid]);
-        //删除login
+        //删除所有login
         Login::deleteAll(['uid' => $this->uid]);
-        //调用扩展零件的删除
-        static::deleteExtPart( $this );
         //返回true继续删除User自身
         return true;
     }
@@ -194,6 +169,7 @@ class User extends ORMBase{
     }
     /*
      * 查询指定平台的指定账号登陆信息
+     * 一个user有多个login，因此不能默认给个login，要精确的去查询
      * @param   string          $platform   查询平台
      * @param   string/array    $account    平台的账号
      * @param   boolean         $onlyOne    是否只查询1个
@@ -231,5 +207,28 @@ class User extends ORMBase{
             //返回实例
             return $login;
         }
+    }
+    /*
+     * =====================================================
+     * 工具相关
+     * =====================================================
+     * */
+    /*
+     * 转换为数组
+     * 遍历各个零件
+     * @param   array | null    $specify仅允许的零件被转换为数组，null为全部零件
+     * */
+    public function asArray( $specify = null ){
+        //通过get获取的零件,此处定义的都在User上对应了getter
+        $partList = ['profile','loginBook'];
+        //转换自身
+        $res = ArrayHelper::toArray($this);
+        //遍历获取零件，会触发sql查询！然后转换为Array
+        foreach ( $partList as $partName ){
+            if( !$specify || isset( $specify[ $partName ] ) ){
+                $res[ $partName ] = ArrayHelper::toArray($this->{$partName});
+            }
+        }
+        return $res;
     }
 }

@@ -24,7 +24,16 @@ class ORMBase extends ActiveRecord{
      * 删除不是表字段的属性，否则ActiveRecord报错
      * */
     public function __construct($config = []){
-        parent::__construct( static::delUnknownProp($config));
+        static::constructCheck( $config );
+        parent::__construct( static::delUnknownProp($config) );
+    }
+
+    /*
+     * 当构造时检查传入参数
+     * 如果错误请抛出异常
+     * @继承实现
+     * */
+    public static function constructCheck( $config ){
     }
 
     /*
