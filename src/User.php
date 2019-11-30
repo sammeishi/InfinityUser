@@ -108,7 +108,7 @@ class User extends ORMBase{
      * */
     public static function createAllPart( $allInit ){
         $list = array(); //所有零件
-        //零件定义
+        //常规零件定义
         $partDefine = [
             'profile' => Profile::className()
         ];
@@ -160,13 +160,24 @@ class User extends ORMBase{
      * */
     /*
      * 登录薄的定义
-     * 登陆薄是指用户的所有登陆信息[ login1,login2 ]
+     * 登陆薄是指用户的所有登陆信息
      * @loginBook结构
      *  [ login instance,login instance,login instance ... ]
      * @return  ActiveQuery     仅返回【查询器】
      * */
     public function getLoginBook(){
         return $this->hasMany(Login::className(),['uid' => 'uid']);
+    }
+    /*
+     * 从参数构造一个登陆薄
+     * */
+    public static function newLoginBook( $init ){
+        $init = is_array( $init ) ? $init : [];
+        $loginBook = [];
+        foreach ( $init as $loginInit ){
+            $loginBook[] = new Login( $loginInit );
+        }
+        return $loginBook;
     }
     /*
      * 查询指定平台的指定账号登陆信息
@@ -215,7 +226,7 @@ class User extends ORMBase{
      * 2. 在将登陆信息全部link进去
      * @param   array   $loginBook  登陆薄实例。如果为空，则清空当前所有登陆信息
      * */
-    public function updateLoginBook( $loginBook ){
+    public function applyLoginBook( $loginBook ){
         $user = $this;
         self::transaction(function()use($loginBook,$user){
             //删除当前所有login信息
