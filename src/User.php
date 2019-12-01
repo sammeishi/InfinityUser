@@ -191,13 +191,12 @@ class User extends ORMBase{
      * @return  array
      * */
     public static function newLoginBook( $init ){
-        $init = is_array( $init ) ? $init : [];
         $loginBook = [];
         foreach ( $init as $loginInit ){
             $login = new Login( $loginInit );
             isset( $loginInit['hashPwd'] ) ? $login->setPwd( $loginInit['hashPwd'] ,false ) : null;
             (isset( $loginInit['pwd'] ) && $loginInit['pwd'] !== null ) ? $login->setPwd( $loginInit['pwd'] ,true ) : null;
-            $loginBook[] = $loginBook;
+            $loginBook[] = $login;
         }
         return $loginBook;
     }
