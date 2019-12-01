@@ -17,16 +17,10 @@ class Login extends ORMBase{
         return $this->hasOne( User::className(),array( 'uid' =>'uid' ) );
     }
     /*
-     * 保存前，对密码进行md5
-     * 藏属性中有pwd才会对密码进行hash
-     * 藏属性中没有说明没有设置密码
+     * 设置密码
      * */
-    public function beforeSave( $insert ){
-        $res = $this->getDirtyAttributes(['pwd']);
-        if( $res && isset($res['pwd']) ){
-            $this->pwd = static::hash( $this->pwd );
-        }
-        return parent::beforeSave($insert);
+    public function setPwd( $pwd,$useHash = true ){
+        $this->pwd = $useHash ? static::hash( $pwd ) : $pwd;
     }
     /*
      * 对密码hash加密

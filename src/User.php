@@ -184,12 +184,20 @@ class User extends ORMBase{
     }
     /*
      * 从参数构造一个登陆薄
+     * @明文密码设置与hash密码设置
+     *  如果$loginInit['pwd']存在，则会调用login->setPwd( pwd,true )进行hash加密赋值
+     *  如果$loginInit['hashPwd']存在，则认为已经hash过了，会直接赋值，无需hash
+     * @param   array   $init   login实例初始化参数
+     * @return  array
      * */
     public static function newLoginBook( $init ){
         $init = is_array( $init ) ? $init : [];
         $loginBook = [];
         foreach ( $init as $loginInit ){
-            $loginBook[] = new Login( $loginInit );
+            $login = new Login( $loginInit );
+            isset( $loginInit['hashPwd'] ) ? $login->setPwd( $loginInit['hashPwd'] ,false ) : null;
+            (isset( $loginInit['pwd'] ) && $loginInit['pwd'] !== null ) ? $login->setPwd( $loginInit['pwd'] ,true ) : null;
+            $loginBook[] = $loginBook;
         }
         return $loginBook;
     }
