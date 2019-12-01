@@ -243,12 +243,13 @@ class User extends ORMBase{
         }
     }
     /*
-     * 更新登陆薄
+     * 替换登陆薄
+     * 传入一个登陆薄，完完整整的替换原来的。
      * 1. 先删除所有登陆信息
      * 2. 在将登陆信息全部link进去
      * @param   array   $loginBook  登陆薄实例。如果为空，则清空当前所有登陆信息
      * */
-    public function applyLoginBook( $loginBook ){
+    public function replaceLoginBook( $loginBook ){
         $user = $this;
         self::transaction(function()use($loginBook,$user){
             //删除当前所有login信息
