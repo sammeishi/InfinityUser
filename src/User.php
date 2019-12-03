@@ -151,6 +151,12 @@ class User extends ORMBase{
         });
     }
     /*
+     * 批量禁用
+     * */
+    public static function batchDisable( $uidList ){
+        static::updateAll(['status' => static::$STATUS_DISABLE],['uid' => $uidList]);
+    }
+    /*
      * ======================================================
      * 资料零件
      * ======================================================
