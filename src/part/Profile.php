@@ -1,6 +1,6 @@
 <?php
-namespace imsd\infinityUser;
-use imsd\infinityUser\ORMBase;
+namespace imsd\infinityUser\part;
+use imsd\infinityUser\common\ORMBase;
 use imsd\infinityUser\User;
 /*
  * 用户的登陆账号部分
@@ -17,5 +17,4 @@ class Profile extends ORMBase{
         return $this->hasOne( User::className(),array( 'uid' =>'uid' ) );
     }
 }
-
 ?>

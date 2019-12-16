@@ -1,114 +1,142 @@
 <?php
 namespace imsd\infinityUser;
-use imsd\infinityUser\Login;
-use imsd\infinityUser\ORMBase;
-use imsd\infinityUser\Config;
-use imsd\infinityUser\Profile;
-use imsd\infinityUser\GroupStore;
-use imsd\infinityUser\RoleStore;
-use yii\db\Exception;
+require __DIR__ . "/ext/LoginExt.trait.php";
+use imsd\infinityUser\common\ORMBase;
+use imsd\infinityUser\ext\LoginExt;
+use imsd\infinityUser\part\Login;
+use imsd\infinityUser\part\Profile;
 use yii\helpers\ArrayHelper;
-
-/*
- * 用户类
- * 实现用户相关的常用功能，并提供扩展方式。
- * 可以基于此类派生出如：“职员系统” “会员系统”
- * @零件 part
- * 用户模型太大在考虑到扩展性，将功能分割成独立的ORM对象，使用ActiveRecord的
- * ORM关联功能进行融合。
- * @零件必须通过get定义
- *  ActiveRecord中通过定义 getPartName函数方式来定义与主ORM的关联性（hasOne,hasMany）
- *  不能私自挂载，如 User['xxx'] = new part()
- * @ActiveRecord的禁止2个未保存ORM进行link
- *  如果new user之后没有save，零件link这个user，会报错！
- *  因为没有ID进行join呀！！
- *  请确保user立即save之后在link！
- * @零件列表
- *  1. 主体       User    用户主体，包含uid，状态以及其他部分id的指引等
- *  2. 资料       Profile 用户姓名，性别，生日等
- *  3. 登陆信息   login   用户在每个平台账号密码。可有多平台单1平台仅1账号
+/**
+ * 用户实现类.
+ * 此类是infinityUser的核心，它是一个框架，将各个模块引入，并实现一些重要的方法和行为！.<br>
+ * 概览 <br>
+ *  - 零件
+ *  - 扩展
+ *  - 功能
+ *
+ * 零件 part. <br>
+ * 考虑到扩展性，将类似功能分割成独立的ORM对象，使用ActiveRecord的ORM关联功能进行融合。<br>
+ * - 零件必须对应一个表<br>
+ * - 零件必须与User主动关联<br>
+ *  - ActiveRecord中通过定义 getPartName函数方式来定义与主ORM的关联性（hasOne,hasMany）
+ *
+ * 注意：先保存才能link. <br>
+ * ActiveRecord的禁止2个未保存ORM进行link <br>
+ * 如果new user之后没有save，零件link这个user，会报错！<br>
+ * 因为没有ID进行join,请确保user立即save之后在link！<br>
+ *
+ * 扩展 ext. <br>
+ * User的一些特性和功能并不存储表因此无法被定义为零件<br>
+ * 这些额外的功能被称为扩展。它会由User引入 <br>
+ * 如组，角色，登录薄都只对应1个或者0个字段，但又确有大量的功能<br>
+ *
+ * 扩展列表.
+ * - loginBook  登录薄，包含用户所有登录信息
+ * - group      组信息
+ * - role       角色信息，可以判定用户拥有的权限
+ *
+ * 零件列表.
+ *  1. 主体       User    对应 iu_user表
+ *  2. 资料       Profile 对应 iu_profile 用户姓名，性别，生日等
+ *  3. 登陆信息   login   对应 iu_login 一对多关系 用户在每个平台账号密码。可有多平台单1平台仅1账号
  * */
 class User extends ORMBase{
-    //此ORM的默认空间，存储时会使用
+    /**
+     * 此类存储的目标空间.
+     * 继承类必须要设置 ！
+     * 继承类实现时，重载此值，将自身数据存储到对应空间.
+     * @var string
+     */
     public static $SPACE = null;
-    /*
-     * ======================================================
-     * 用户状态
-     * 小于1的状态为无效，用户被禁用
-     * 大于等于1的都正常使用中
-     * ======================================================
-     * */
-    public static $STATUS_USABLE = 1; //正常
-    public static $STATUS_DISABLE = 0; //被禁用所有功能被停用，但可被恢复
-    public static $STATUS_INTENDED = -1; //预注册用户，功能被限制。可被彻底删除
-    public static $STATUS_INVALID = -99999; //已注销，彻底无效
-    /*
-     * 初始化 ( 由yii调用 )
-     * 设置默认状态，以及各种默认值
-     * */
+    /**
+     * 用户状态: 正常
+     * @var int
+     */
+    public static $STATUS_USABLE = 1;
+    /**
+     * 用户状态: 禁用.
+     * 功能被停用，但是可以恢复。
+     * @var int
+     */
+    public static $STATUS_DISABLE = 0;
+    /**
+     * 用户状态: 预分配用户.
+     * 仅仅是预分配一个用户id，用于正式注册之前。
+     * @var int
+     */
+    public static $STATUS_INTENDED = -1;
+    /**
+     * 用户状态：临时的
+     * 会被定期删除
+     */
+    public static $STATUS_TMP = -10000;
+
+    /**
+     * 加载登录扩展
+     */
+    use LoginExt;
+
+    /**
+     * 初始化事件.
+     * 如果一些属性不存在，则使用默认值
+     */
     public function init(){
-        //父init
+        //触发父类的init
         parent::init();
-        //状态为空，使用默认值
+        //状态为空，默认为：正常
         $this->status === null ? $this->status = self::$STATUS_USABLE : null;
     }
-    /*
-     * 检查构造时参数的正确性
-     * 不正确直接抛出异常
-     * 1. 组ID是否存在
-     * 2. 角色id是否存在
-     * */
-    public static function constructCheck( $init = [] ){
-        if( !is_array($init) ){
-            throw new Exception('construct config wrong! need be array!');
-        }
-        //检查角色是否存在
-        if( !empty( $init['role_id'] ) ){
-            $roleStore = new RoleStore( $init['space'] );
-            if( $roleStore->getById( $init['role_id'] ) === null ){
-                throw new Exception('role id '.$init['role_id'].' not exist!');
-            }
-        }
-        //检查组
-        if( !empty( $init['group_id'] ) ){
-            $groupStore = new GroupStore( $init['space'] );
-            if( $groupStore->getById( $init['group_id'] ) === null ){
-                throw new Exception('group id '.$init['group_id'].' not exist!');
-            }
-        }
-    }
-    /*
-     * 完整构造出一个新的User实例
-     * 将零件全部构造出实例（link）
-     * @零件初始化参数
-     *  主初始化参数内，包含了以零件key为索引的零件初始化参数
-     * @自动剔除无用参数
-     *  初始化参数的无用参数会被删除，ORMBase中调用了 delUnknownProp
-     * */
-    public static function create( $allInit = array() ){
-        //不传入空间使用继承类覆盖的值
+
+    /**
+     * 完整创建一个新的用户实例.
+     * 会挨个将零件全部构造出来，使用yii的link功能.<br>
+     * 传入的初始化数据，其中包含了各个零件的初始化数据，会解析出来传递给对应零件. <br>
+     * 会自动删除表不存在字段
+     * 流程<br>
+     *  - 计算出空间名：不传入使用本类静态常量定义的
+     *  - 替换状态为预分配（插入成功后在还原）
+     *  - 构造出User实例，并插入。(不构造User拿不到id，就无法构造零件)
+     *  - 创建各个零件 以及 还原状态
+     * @param array $allInit                    全部初始化数据，包含零件的!
+     * @return static                           返回User实例或者继承类实例
+     * @throws \Throwable                       未知，yii抛出
+     * @throws \yii\base\InvalidConfigException 未知，yii抛出
+     */
+    public static function create( $allInit = [] ){
+        //不指明空间使用类中定义的空间
         !isset($allInit['space']) ? $allInit['space'] = static::$SPACE : null;
+        //替换状态为预分配状态，插入成功在还原,防止插入失败,User自身插入没有事务
+        $status = isset( $allInit['status'] ) ? $allInit['status'] : self::$STATUS_USABLE;
         //构造出User实例并立即保存，否则零件无法link（User不存在，link时没有uid的）
         $user = new static( $allInit );
+        $user->status = self::$STATUS_TMP;
         $user->save();
         //创建各个零件
         $partList = static::createAllPart( $allInit );
         //在事务内插入各个零件 link调用立即insert数据库
-        static::transaction( function()use( $user,$partList ){
+        static::transaction( function()use( $user,$status,$partList ){
+            //逐个插入零件
             foreach ($partList as $part){
                 $part->link('user',$user);
             }
+            //还原user状态
+            $user->status = $status;
+            $user->save();
         } );
         //返回user
         return $user;
     }
-    /*
-     * 构造出主要零件列表实例,仅仅是核心零件
-     * @param   $allInit    array(key=>val) 构造User传入的主配置
-     * */
+
+    /**
+     * 创建所有零件.
+     * 每个零件都是ORM继承类，使用yii的关联特性进行同时创建插入表. <br>
+     * 仅仅是构造出实例，交由User进行link才能真正插入
+     * @param   array   $allInit    User完整初始化数据，也包含各个零件的数据
+     * @return  array               返回零件对象列表
+     */
     public static function createAllPart( $allInit ){
-        $list = array(); //所有零件
-        //常规零件定义
+        $list = array();
+        //零件定义
         $partDefine = [
             'profile' => Profile::className()
         ];
@@ -120,165 +148,77 @@ class User extends ORMBase{
         //返回所有零件
         return $list;
     }
-    /*
-     * 监听beforeDelete，删除各个零件
-     * ActiveRecord的delete只会删除自身，并不会删除link的各个ORM,因此此处删除零件
-     * @仅实例调用
-     *  此功能使用场景为：已经find出实例了，对实例del
-     * @自动事务
-     *  delete已经开启了事务，因此不需要单独开启！
-     * @触发deleteExtPart
-     *  会调用deleteExtPart，继承类可以删除扩展零件
-     * */
+
+    /**
+     * 拦截yii事件实例删除之前,清空零件数据.
+     * User删除时候会触发，但是只能删除User自身无法删除零件.<br>
+     * 因此在此事件回调中删除各个零件 <br>
+     * 此回调执行删除零件，也会被计入事务内，因为yii的delete已经开启了事务
+     * @return bool
+     */
     public function beforeDelete(){
-        //删除profile
-        Profile::deleteAll(['uid' => $this->uid]);
-        //删除所有login
-        Login::deleteAll(['uid' => $this->uid]);
-        //返回true继续删除User自身
+        //删除所有零件
+        self::delAllPart( $this->uid );
+        //必须返回true，否则会终止删除操作。
         return true;
     }
-    /*
-     * 批量删除
-     * 不会查询实例，直接删除以及各个零件
-     * @param   array   $uidList    要删除的uid列表
-     * */
+
+    /**
+     * 删除一个或者多个用户的所有零件.
+     * 无需构造出User实例即可删除.
+     * @param int | array   $uid    用户id,也可以传入数组批量删除
+     */
+    public static function delAllPart( $uid ){
+        //删除profile,调用yii的AR方法
+        Profile::deleteAll(['uid' => $uid]);
+        //删除所有login,调用yii的AR方法
+        Login::deleteAll(['uid' => $uid]);
+    }
+
+    /**
+     * 批量删除User，无需构造实例.
+     * @param array $uidList    要删除的用户id列表
+     * @throws \Throwable       mysql错误，yii抛出
+     */
     public static function batchDel( $uidList ){
         self::transaction(function()use( $uidList ){
+            //删除所有零件
+            self::delAllPart( $uidList );
+            //删除用户本身
             static::deleteAll( ['uid' => $uidList] );
-            Profile::deleteAll( ['uid' => $uidList] );
-            Login::deleteAll( ['uid' => $uidList] );
         });
     }
+
     /*
-     * 批量禁用
-     * */
-    public static function batchDisable( $uidList ){
-        static::updateAll(['status' => static::$STATUS_DISABLE],['uid' => $uidList]);
-    }
-    /*
-     * ======================================================
-     * 资料零件
-     * ======================================================
-     * */
-    /*
-     * 资料的定义
-     * @return ActiveQuery  仅返回查询器，不要返回结果。查询器可以串联使用。
+    * ========================================================
+    * 零件定义关联
+    * ========================================================
+    * */
+
+    /**
+     * 资料零件的关联
+     * @return \yii\db\ActiveQuery 仅返回查询器，不要返回结果。查询器可以串联使用。
      */
     public function getProfile(){
         return $this->hasOne(Profile::className(),['uid' => 'uid']);
     }
+
     /*
-     * ======================================================
-     * 登陆零件
-     * @与User关系
-     *  1 User hasMany Login
-     * @多平台多账户
-     *  每个用户可以有多个平台 platform允许重复
-     *  每个平台，只能有一个账号 platform > account 不能重复！
-     * ======================================================
-     * */
-    /*
-     * 登录薄的定义
-     * 登陆薄是指用户的所有登陆信息
-     * @loginBook结构
-     *  [ login instance,login instance,login instance ... ]
-     * @return  ActiveQuery     仅返回【查询器】
-     * */
-    public function getLoginBook(){
-        return $this->hasMany(Login::className(),['uid' => 'uid']);
-    }
-    /*
-     * 从参数构造一个登陆薄
-     * @明文密码设置与hash密码设置
-     *  如果$loginInit['pwd']存在，则会调用login->setPwd( pwd,true )进行hash加密赋值
-     *  如果$loginInit['hashPwd']存在，则认为已经hash过了，会直接赋值，无需hash
-     * @param   array   $init   login实例初始化参数
-     * @return  array
-     * */
-    public static function newLoginBook( $init ){
-        $loginBook = [];
-        foreach ( $init as $loginInit ){
-            $login = new Login( $loginInit );
-            isset( $loginInit['hashPwd'] ) ? $login->setPwd( $loginInit['hashPwd'] ,false ) : null;
-            (isset( $loginInit['pwd'] ) && $loginInit['pwd'] !== null ) ? $login->setPwd( $loginInit['pwd'] ,true ) : null;
-            $loginBook[] = $login;
-        }
-        return $loginBook;
-    }
-    /*
-     * 查询指定平台的指定账号登陆信息
-     * 一个user有多个login，因此不能默认给个login，要精确的去查询
-     * @param   string          $platform   查询平台
-     * @param   string/array    $account    平台的账号
-     * @param   boolean         $onlyOne    是否只查询1个
-     * @return  null            查询不出
-     * @return  array           返回查询出的login实例，可能多个
-     * */
-    public function queryLogin( $platform,$account = null,$onlyOne = false ){
-        $account = $account && !is_array( $account ) ? [ $account ] : $account;
-        $condition = [ 'platform' => $platform ];
-        $account ? $condition['account'] = $account : null;
-        $q = $this->hasMany( Login::className(), ['uid' => 'uid'])
-            ->where( $condition );
-        return $onlyOne ? $q->one() : $q->all();
-    }
-    /*
-     * 更新(增加，修改)用户的某一个登陆信息
-     * 如果此登陆存在，则更新
-     * 如果不存在，则插入
-     * */
-    public function updateLogin( $loginInit ){
-        //先查询添加的login是否存在
-        $exist = $this->queryLogin( $loginInit['platform'],$loginInit['account'] , 1 );
-        //如果存在，使用存在的更新
-        if( $exist ){
-            foreach ($loginInit as $key => $val){
-                $exist->{$key} = $val;
-            }
-            $exist->save();
-            return $exist;
-        }
-        else{
-            //连接到自身User上
-            $login = new Login( $loginInit );
-            $login->link('user',$this);
-            //返回实例
-            return $login;
-        }
-    }
-    /*
-     * 替换登陆薄
-     * 传入一个登陆薄，完完整整的替换原来的。
-     * 1. 先删除所有登陆信息
-     * 2. 在将登陆信息全部link进去
-     * @param   array   $loginBook  登陆薄实例。如果为空，则清空当前所有登陆信息
-     * */
-    public function replaceLoginBook( $loginBook ){
-        $user = $this;
-        self::transaction(function()use($loginBook,$user){
-            //删除当前所有login信息
-            Login::deleteAll( ['uid' => $user->uid] );
-            //将新的插入
-            foreach ( $loginBook as $login ){
-                $login->link('user',$user);
-            }
-        });
-    }
-    /*
-     * =====================================================
+     * ========================================================
      * 工具相关
-     * =====================================================
+     * ========================================================
      * */
-    /*
-     * 转换为数组
-     * 遍历各个零件
-     * @param   array | null    $specify仅允许的零件被转换为数组，null为全部零件
-     * */
+
+    /**
+     * 将User实例转换为数组.
+     * 先将User自身转换为数组，然后遍历各个零件，转换为数组类型嵌入到User上.
+     * @param array | null $specify 仅允许的零件被转换为数组，null为全部零件
+     * @return array
+     */
     public function asArray( $specify = null ){
-        //通过get获取的零件,此处定义的都在User上对应了getter
+        //要转换的零件列表,此处定义的零件都在User上对应了getter,不定义会报错
         $partList = ['profile','loginBook'];
-        //转换自身
+        //先转换自身
         $res = ArrayHelper::toArray($this);
         //遍历获取零件，会触发sql查询！然后转换为Array
         foreach ( $partList as $partName ){
