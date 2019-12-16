@@ -1,13 +1,14 @@
 {
   "name": "imsd/infinity-user",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "require": {
     "yidas/yii2-composer-bower-skip": "^2.0",
     "php": ">=7.1",
     "yiisoft/yii2": "~2.0.0"
   },
   "require-dev": {
-    "phpdocumentor/phpdocumentor": "dev-master"
+    "phpdocumentor/phpdocumentor": "dev-master",
+    "phpunit/phpunit": "^8"
   },
   "minimum-stability": "dev",
   "prefer-stable": true,

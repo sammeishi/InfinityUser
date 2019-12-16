@@ -1,19 +1,17 @@
 <?php
 namespace app\controllers;
-use imsd\infinityUser\Login;
+use yii\db\Exception;
+use yii\validators\StringValidator;
 use yii\web\Controller;
 use imsd\infinityUser\User;
-use imsd\infinityUser\Config;
+use imsd\infinityUser\common\Config;
 
 class DefController extends Controller
 {
-    public function actionIndex()
-    {
+    public function actionIndex(){
     }
     public function actionAdd(){
-
     }
     public function actionSet(){
-
     }
 }
