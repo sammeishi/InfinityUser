@@ -13,7 +13,8 @@ trait PartExt{
 
     /**
      * 零件列表定义.
-     * 如果有自己的零件，请重载！
+     * 派生User的类，有零件必须被定义，否则User销毁时零件还在！！！ <br>
+     * 请保证零件类与User靠uid字段关联！！！ 请遵循！
      * @return array    返回所有零件定义
      */
     public static function partDefine(){

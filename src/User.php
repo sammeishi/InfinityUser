@@ -23,10 +23,15 @@ use yii\helpers\ArrayHelper;
  *  - 功能
  *
  * 零件 part. <br>
- * 考虑到扩展性，将类似功能分割成独立的ORM对象，使用ActiveRecord的ORM关联功能进行融合。<br>
- * - 零件必须对应一个表<br>
- * - 零件必须与User主动关联<br>
- *  - ActiveRecord中通过定义 getPartName函数方式来定义与主ORM的关联性（hasOne,hasMany）
+ * 将用户功能都分割出来，包括表。这些分割的对象就是零件<br>
+ * - 零件必须对应一个表
+ * - 零件与User必须靠uid关联
+ *   - 写死的，请遵循！
+ * - 零件必须被定义,即partDefine方法<br>
+ *   - 如果不定义，用户实例被销毁时零件无法被销毁
+ * - 一对多的零件不要关联
+ *   - 一对一的零件关联是很完美的，因为不需要查询参数。如User->profile
+ *      但是一对多不行，如User->login会返回全部login，但仅仅只需其中一两个！
  *
  * 注意：先保存才能link. <br>
  * ActiveRecord的禁止2个未保存ORM进行link <br>
