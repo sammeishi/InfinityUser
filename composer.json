@@ -1,6 +1,6 @@
 {
   "name": "imsd/infinity-user",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "require": {
     "yidas/yii2-composer-bower-skip": "^2.0",
     "php": ">=7.1",
