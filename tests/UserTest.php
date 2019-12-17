@@ -63,10 +63,47 @@ final class UserTest extends TestCase{
         $this->assertEquals( $findUser->space,$space );
         $this->assertEquals( $findUser->group_id,$groupId );
         $this->assertEquals( $findUser->role_id,$roleId );
-        //删除
-        $user->delete();
+        //销毁
+        $user->destroy();
+        $this->assertNull( User::findOne(['uid'=>$uid]) );
+    }
+
+    /**
+     * 测试删除与销毁
+     */
+    public function test_user_delete(){
+        /**
+         * 单个用户删除
+         * 只是状态禁用
+         */
+        $user = $this->addUser();
+        $uid = $user->uid;
+        //删除,只是禁用方式
+        $user->del();
         //检查删除情况
-        $this->assertEmpty( User::findOne(['uid'=>$uid]) );
+        $findUser = User::findOne(['uid'=>$user->uid]);
+        $this->assertNotNull( $findUser );
+        $this->assertEquals( $findUser->status, User::$STATUS_DELETED );
+        //真正销毁
+        $findUser->destroy();
+        $this->assertNull( User::findOne(['uid' => $uid]) );
+        /**
+         * 生成批量用户
+         */
+        $userList = [];
+        $uidList = [];
+        $n = 10;
+        while ( $n-- ){
+            $u =  $this->addUser();
+            $userList[] = $u;
+            $uidList[] = $u->uid;
+        }
+        //批量禁用
+        User::batchDisable( $uidList );
+        $this->assertEmpty( User::findOne( ['uid' => $uidList,'status' => User::$STATUS_USABLE] ) );//验证，通过查找正常状态用户
+        //批量删除
+        User::batchDestroy( $uidList );
+        $this->assertNull( User::findOne( ['uid' =>$uidList ]) );
     }
 
     /**
@@ -74,7 +111,6 @@ final class UserTest extends TestCase{
      * 插入登录薄，检测插入，密码验证,删除登录薄
      */
     public function test_LoginBook_RW(){
-        //测试插入
         $user = $this->addUser();
         $uid = $user->uid;
         //登录薄数据
@@ -96,10 +132,13 @@ final class UserTest extends TestCase{
         foreach ( $lgData as $loginData ){
             $this->assertTrue(  $user->verifyLogin( $loginData['platform'],$loginData['account'],$loginData['pwd'] ) );
         }
-        //删除
+        //删除登录薄
         $user->emptyLoginBook();
         //检查删除
         $this->assertEmpty( $user->getLoginBook()->all() );
+        //删除整个用户
+        $user->destroy();
+        $this->assertEmpty( User::findOne(['uid' => $uid]) );
     }
 
     /*
